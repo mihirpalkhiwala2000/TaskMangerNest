@@ -1,11 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Res } from '@nestjs/common';
 import { UserModel } from './users.model';
 import { InjectModel } from 'nestjs-typegoose';
 import { CreateUsersDto } from './dto/create-user.dto';
 import { errorMsgs } from '../../constants';
 import { ReturnModelType } from '@typegoose/typegoose';
 import { hashedPassword } from 'utils/passwordHashingUtil';
-import { generate } from 'rxjs';
 import { generateToken } from 'utils/generateTokenUtil';
 import * as bcrypt from 'bcrypt';
 
@@ -71,24 +70,32 @@ export class UsersService {
   }
   async loginUser({ email, password }) {
     const userData = await this.userModel.findOne({ email });
+
     if (!userData) {
-      throw new NotFoundException(errorMsgs.noUserEmailFound);
+      console.log('hii');
+      throw new Error(errorMsgs.noUserEmailFound);
     }
     const isMatch = await bcrypt.compare(password, userData.password);
+
     if (!isMatch) {
-      throw new NotFoundException(errorMsgs.passwordError);
+      throw new Error(errorMsgs.passwordError);
     }
 
     const userTokenData = await generateToken(userData);
-    console.log(
-      '🚀 ~ file: users.service.ts:83 ~ UsersService ~ loginUser ~ userTokenData:',
-      userTokenData,
-    );
 
     const userDataWithToken = await this.userModel.findOneAndUpdate(
       { email },
       { tokens: userTokenData.tokens },
     );
-    return userDataWithToken;
+    const token = userTokenData.tokens[0];
+    return { userData, token };
+  }
+
+  async logoutUser(id: string) {
+    const logoutUser = await this.userModel.findByIdAndUpdate(id, {
+      tokens: [],
+    });
+
+    return { logoutUser };
   }
 }

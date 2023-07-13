@@ -4,6 +4,7 @@ import { TaskModule } from './task/task.module';
 import { UsersModule } from './users/users.module';
 import { ConfigModule } from '@nestjs/config';
 import { TypegooseModule } from 'nestjs-typegoose';
+import { JwtAuthGuard } from './guards/authGuard';
 
 @Module({
   imports: [

@@ -15,4 +15,7 @@ export class Task {
 
   @prop()
   status: TaskStatus;
+
+  @prop()
+  owner: string;
 }

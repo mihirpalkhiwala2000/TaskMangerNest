@@ -4,4 +4,5 @@ export const errorMsgs: any = {
   noUserFound: 'No such user found with the given id',
   noUserEmailFound: 'No such user with given email id found',
   passwordError: 'Password is incorrect',
+  unauthorized: 'Unauthorized',
 };

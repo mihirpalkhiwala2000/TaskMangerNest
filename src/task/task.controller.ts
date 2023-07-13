@@ -7,12 +7,16 @@ import {
   Patch,
   Post,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { TaskService } from './task.service';
 import { Task, TaskStatus } from './task.model';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { GetTasksFilterDto } from './dto/get-task-filter.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
+import { JwtAuthGuard } from 'src/guards/authGuard';
+import { UserRequest } from 'src/users/users.controller';
 
 @Controller('task')
 export class TaskController {
@@ -32,9 +36,16 @@ export class TaskController {
     return this.taskService.getTaskByID(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post()
-  createTask(@Body() createTaskDto: CreateTaskDto): Promise<Task> {
+  createTask(
+    @Body() createTaskDto: CreateTaskDto,
+    @Req() req: UserRequest,
+  ): Promise<Task> {
     try {
+      const { _id }: any = req.user;
+      createTaskDto.owner = _id;
+
       const createdTask = this.taskService.createTask(createTaskDto);
       return createdTask;
     } catch (e) {
@@ -42,10 +53,14 @@ export class TaskController {
     }
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete('/:id')
-  deleteTask(@Param('id') id: string): Promise<Task> {
-    console.log('Hii');
-    return this.taskService.deleteTask(id);
+  deleteTask(
+    @Param('id') taskId: string,
+    @Req() req: UserRequest,
+  ): Promise<Task> {
+    const { _id }: any = req.user;
+    return this.taskService.deleteTask(_id, taskId);
   }
   @Patch('/:id/status')
   updateTaskStatus(

@@ -5,6 +5,7 @@ import { GetTasksFilterDto } from './dto/get-task-filter.dto';
 import { InjectModel } from 'nestjs-typegoose';
 import { Model } from 'mongoose';
 import { errorMsgs } from '../../constants';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class TaskService {
@@ -53,11 +54,12 @@ export class TaskService {
   }
 
   async createTask(createTaskDto: CreateTaskDto): Promise<any> {
-    const { title, description } = createTaskDto;
+    const { title, description, owner } = createTaskDto;
     const task: any = {
       title,
       description,
       status: TaskStatus.OPEN,
+      owner,
     };
 
     const newTask = await this.taskModel.create(task);
@@ -65,8 +67,11 @@ export class TaskService {
     return newTask;
   }
 
-  async deleteTask(id: string): Promise<Task> {
-    const deletedTask = await this.taskModel.findByIdAndDelete(id);
+  async deleteTask(_id: string, taskId: string): Promise<Task> {
+    const deletedTask = await this.taskModel.findOneAndDelete({
+      _id: taskId,
+      owner: _id,
+    });
 
     if (!deletedTask) {
       throw new NotFoundException(errorMsgs.noTaskFound);

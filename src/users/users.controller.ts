@@ -6,6 +6,9 @@ import {
   Param,
   Patch,
   Post,
+  Req,
+  Res,
+  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UserModel } from './users.model';
@@ -13,6 +16,13 @@ import { CreateUsersDto } from './dto/create-user.dto';
 import { errorMsgs } from '../../constants';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { JwtAuthGuard } from 'src/guards/authGuard';
+import { ObjectId } from 'mongodb';
+
+export interface UserRequest extends Request {
+  user: UserModel;
+  _id: string;
+}
 
 @Controller('users')
 export class UsersController {
@@ -35,40 +45,60 @@ export class UsersController {
     }
   }
 
-  @Get('/:id')
-  getUserById(@Param('id') id: string): Promise<UserModel> {
-    return this.userService.getUserDataById(id);
+  @UseGuards(JwtAuthGuard)
+  @Get('/profile')
+  getUserById(@Req() req: UserRequest): Promise<UserModel> {
+    const { _id }: any = req.user;
+    return this.userService.getUserDataById(_id);
   }
 
-  @Patch('/:id')
+  @UseGuards(JwtAuthGuard)
+  @Patch('update')
   async updateUserData(
-    @Param('id') id: string,
+    @Req() req: UserRequest,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<UserModel | string> {
     try {
+      const { _id }: any = req.user;
       const { name, password } = updateUserDto;
-      const abc = await this.userService.updateUserData(id, name, password);
+      const abc = await this.userService.updateUserData(_id, name, password);
       return abc;
     } catch (e) {
       return errorMsgs.noUserFound;
     }
   }
 
-  @Delete('/:id')
-  async deleteUser(@Param('id') id: string): Promise<UserModel | string> {
+  @UseGuards(JwtAuthGuard)
+  @Delete()
+  async deleteUser(@Req() req: UserRequest): Promise<UserModel | string> {
     try {
-      const deletedUser = await this.userService.deleteUser(id);
+      const { _id }: any = req.user;
+
+      const deletedUser = await this.userService.deleteUser(_id);
       return deletedUser;
     } catch (e) {
       return errorMsgs.noUserFound;
     }
   }
   @Post('/login')
-  async loginUser(@Body() loginUserDto: LoginUserDto) {
+  async loginUser(@Body() loginUserDto: LoginUserDto, @Res() res: any) {
     try {
-      return this.userService.loginUser(loginUserDto);
+      const { userData, token } = await this.userService.loginUser(
+        loginUserDto,
+      );
+
+      res.send({ userData, token });
     } catch (e) {
-      return e.message;
+      res.status(404).send(e.message);
     }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/logout')
+  async logoutUser(@Req() req: UserRequest, @Res() res) {
+    const { _id }: any = req.user;
+    const { logoutUser } = await this.userService.logoutUser(_id);
+
+    res.send({ logoutUser });
   }
 }
