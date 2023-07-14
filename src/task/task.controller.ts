@@ -18,22 +18,28 @@ import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
 import { JwtAuthGuard } from 'src/guards/authGuard';
 import { UserRequest } from 'src/users/users.controller';
 
+@UseGuards(JwtAuthGuard)
 @Controller('task')
 export class TaskController {
   constructor(private taskService: TaskService) {}
 
   @Get()
-  getTasks(@Query() filterDto: GetTasksFilterDto): Promise<Task[]> {
+  getTasks(
+    @Query() filterDto: GetTasksFilterDto,
+    @Req() req: UserRequest,
+  ): Promise<Task[]> {
+    const ownerId = req._id;
     if (Object.keys(filterDto).length) {
-      return this.taskService.getTasksWithFilters(filterDto);
+      return this.taskService.getTasksWithFilters(filterDto, ownerId);
     } else {
-      return this.taskService.getAllTasks();
+      return this.taskService.getAllTasks(ownerId);
     }
   }
 
   @Get('/:id')
-  getTaskByID(@Param('id') id: string): Promise<Task> {
-    return this.taskService.getTaskByID(id);
+  getTaskByID(@Param('id') id: string, @Req() req: UserRequest): Promise<Task> {
+    const ownerId = req._id;
+    return this.taskService.getTaskByID(id, ownerId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -43,8 +49,7 @@ export class TaskController {
     @Req() req: UserRequest,
   ): Promise<Task> {
     try {
-      const { _id }: any = req.user;
-      createTaskDto.owner = _id;
+      createTaskDto.owner = req._id;
 
       const createdTask = this.taskService.createTask(createTaskDto);
       return createdTask;
@@ -53,21 +58,22 @@ export class TaskController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
   @Delete('/:id')
   deleteTask(
     @Param('id') taskId: string,
     @Req() req: UserRequest,
   ): Promise<Task> {
-    const { _id }: any = req.user;
-    return this.taskService.deleteTask(_id, taskId);
+    const ownerId = req._id;
+    return this.taskService.deleteTask(ownerId, taskId);
   }
   @Patch('/:id/status')
   updateTaskStatus(
     @Param('id') id: string,
+    @Req() req: UserRequest,
     @Body() updateTaskStatusDto: UpdateTaskStatusDto,
   ): Promise<Task> {
+    const ownerId = req._id;
     const { status } = updateTaskStatusDto;
-    return this.taskService.updateTaskStatus(id, status);
+    return this.taskService.updateTaskStatus(id, status, ownerId);
   }
 }

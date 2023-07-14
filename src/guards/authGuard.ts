@@ -38,7 +38,8 @@ export class JwtAuthGuard {
       }
       userDetails;
       const { _id }: any = userDetails;
-      req.user = userDetails;
+      req._id = _id as string;
+
       return true;
     } catch (e) {
       throw new UnauthorizedException();

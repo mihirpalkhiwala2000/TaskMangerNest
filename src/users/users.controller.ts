@@ -48,8 +48,8 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Get('/profile')
   getUserById(@Req() req: UserRequest): Promise<UserModel> {
-    const { _id }: any = req.user;
-    return this.userService.getUserDataById(_id);
+    const userId = req._id;
+    return this.userService.getUserDataById(userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -59,9 +59,9 @@ export class UsersController {
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<UserModel | string> {
     try {
-      const { _id }: any = req.user;
+      const userId = req._id;
       const { name, password } = updateUserDto;
-      const abc = await this.userService.updateUserData(_id, name, password);
+      const abc = await this.userService.updateUserData(userId, name, password);
       return abc;
     } catch (e) {
       return errorMsgs.noUserFound;
@@ -72,9 +72,9 @@ export class UsersController {
   @Delete()
   async deleteUser(@Req() req: UserRequest): Promise<UserModel | string> {
     try {
-      const { _id }: any = req.user;
+      const userId = req._id;
 
-      const deletedUser = await this.userService.deleteUser(_id);
+      const deletedUser = await this.userService.deleteUser(userId);
       return deletedUser;
     } catch (e) {
       return errorMsgs.noUserFound;
@@ -96,8 +96,8 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Post('/logout')
   async logoutUser(@Req() req: UserRequest, @Res() res) {
-    const { _id }: any = req.user;
-    const { logoutUser } = await this.userService.logoutUser(_id);
+    const userId = req._id;
+    const { logoutUser } = await this.userService.logoutUser(userId);
 
     res.send({ logoutUser });
   }

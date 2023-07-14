@@ -4,8 +4,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { GetTasksFilterDto } from './dto/get-task-filter.dto';
 import { InjectModel } from 'nestjs-typegoose';
 import { Model } from 'mongoose';
-import { errorMsgs } from '../../constants';
-import { UsersService } from 'src/users/users.service';
+import { taskCheck } from 'utils/taskNotFoundUtil';
 
 @Injectable()
 export class TaskService {
@@ -14,19 +13,19 @@ export class TaskService {
     public taskModel: Model<Task>,
   ) {}
 
-  async getAllTasks(): Promise<Task[]> {
-    const tasks = await this.taskModel.find();
+  async getAllTasks(ownerId: string): Promise<Task[]> {
+    const tasks = await this.taskModel.find({ owner: ownerId });
 
     return tasks;
   }
 
   async getTasksWithFilters(
     filterDto: GetTasksFilterDto,
+    ownerId: string,
   ): Promise<Task[] | null> {
     const { status, search } = filterDto;
 
-    let tasks = await this.getAllTasks();
-    console.log('🚀 ~ file: task.service.ts:32 ~ TaskService ~ tasks:', tasks);
+    let tasks = await this.getAllTasks(ownerId);
 
     if (status) {
       tasks = tasks.filter((task) => task.status === status);
@@ -44,13 +43,10 @@ export class TaskService {
     }
     return tasks;
   }
-  async getTaskByID(id: string): Promise<Task> {
-    const found = await this.taskModel.findById(id);
-
-    if (!found) {
-      throw new NotFoundException(errorMsgs.noTaskFound);
-    }
-    return found;
+  async getTaskByID(id: string, ownerId: string): Promise<Task> {
+    const task = await this.taskModel.findOne({ _id: id, owner: ownerId });
+    const taskDetails = taskCheck(task);
+    return taskDetails;
   }
 
   async createTask(createTaskDto: CreateTaskDto): Promise<any> {
@@ -72,21 +68,19 @@ export class TaskService {
       _id: taskId,
       owner: _id,
     });
-
-    if (!deletedTask) {
-      throw new NotFoundException(errorMsgs.noTaskFound);
-    }
-    return deletedTask;
+    const deletedTaskDetails = taskCheck(deletedTask);
+    return deletedTaskDetails;
   }
 
-  async updateTaskStatus(id: string, status: TaskStatus) {
-    const task = await this.taskModel.findByIdAndUpdate(
-      id,
+  async updateTaskStatus(id: string, status: TaskStatus, ownerId: string) {
+    const task = await this.taskModel.findOneAndUpdate(
+      { _id: id, owner: ownerId },
       { status },
       {
         new: true,
       },
     );
-    return task;
+    const taskDetails = taskCheck(task);
+    return taskDetails;
   }
 }
