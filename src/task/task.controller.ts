@@ -8,15 +8,17 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { TaskService } from './task.service';
-import { Task, TaskStatus } from './task.model';
+import { Task } from './task.model';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { GetTasksFilterDto } from './dto/get-task-filter.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
 import { JwtAuthGuard } from 'src/guards/authGuard';
 import { UserRequest } from 'src/users/users.controller';
+import { errorMsgs, statusCodes } from '../../constants';
 
 @UseGuards(JwtAuthGuard)
 @Controller('task')
@@ -24,56 +26,91 @@ export class TaskController {
   constructor(private taskService: TaskService) {}
 
   @Get()
-  getTasks(
+  async getTasks(
     @Query() filterDto: GetTasksFilterDto,
     @Req() req: UserRequest,
-  ): Promise<Task[]> {
-    const ownerId = req._id;
-    if (Object.keys(filterDto).length) {
-      return this.taskService.getTasksWithFilters(filterDto, ownerId);
-    } else {
-      return this.taskService.getAllTasks(ownerId);
+    @Res() res,
+  ) {
+    try {
+      const ownerId = req._id;
+      if (Object.keys(filterDto).length) {
+        const filteredTasks = await this.taskService.getTasksWithFilters(
+          filterDto,
+          ownerId,
+        );
+        res.status(statusCodes.success).send(filteredTasks);
+      } else {
+        const allTasks = await this.taskService.getAllTasks(ownerId);
+        res.status(statusCodes.success).send(allTasks);
+      }
+    } catch {
+      res.status(statusCodes.notFound).send(errorMsgs.noTaskFound);
     }
   }
 
   @Get('/:id')
-  getTaskByID(@Param('id') id: string, @Req() req: UserRequest): Promise<Task> {
-    const ownerId = req._id;
-    return this.taskService.getTaskByID(id, ownerId);
+  async getTaskByID(
+    @Param('id') id: string,
+    @Req() req: UserRequest,
+    @Res() res,
+  ) {
+    try {
+      const ownerId = req._id;
+      res
+        .status(statusCodes.success)
+        .send(await this.taskService.getTaskByID(id, ownerId));
+    } catch {
+      res.status(statusCodes.notFound).send(errorMsgs.noTaskFound);
+    }
   }
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  createTask(
+  async createTask(
     @Body() createTaskDto: CreateTaskDto,
     @Req() req: UserRequest,
-  ): Promise<Task> {
+    @Res() res,
+  ) {
     try {
       createTaskDto.owner = req._id;
 
-      const createdTask = this.taskService.createTask(createTaskDto);
-      return createdTask;
+      const createdTask = await this.taskService.createTask(createTaskDto);
+      res.status(statusCodes.created).send(createdTask);
     } catch (e) {
-      console.log(e);
+      res.status(errorMsgs.badRequest).send(e);
     }
   }
 
   @Delete('/:id')
-  deleteTask(
+  async deleteTask(
     @Param('id') taskId: string,
     @Req() req: UserRequest,
-  ): Promise<Task> {
-    const ownerId = req._id;
-    return this.taskService.deleteTask(ownerId, taskId);
+    @Res() res,
+  ) {
+    try {
+      const ownerId = req._id;
+      res
+        .status(statusCodes.success)
+        .send(await this.taskService.deleteTask(ownerId, taskId));
+    } catch (e) {
+      res.status(errorMsgs.badRequest).send(e);
+    }
   }
   @Patch('/:id/status')
-  updateTaskStatus(
+  async updateTaskStatus(
     @Param('id') id: string,
     @Req() req: UserRequest,
+    @Res() res,
     @Body() updateTaskStatusDto: UpdateTaskStatusDto,
-  ): Promise<Task> {
-    const ownerId = req._id;
-    const { status } = updateTaskStatusDto;
-    return this.taskService.updateTaskStatus(id, status, ownerId);
+  ) {
+    try {
+      const ownerId = req._id;
+      const { status } = updateTaskStatusDto;
+      res
+        .status(statusCodes.success)
+        .send(await this.taskService.updateTaskStatus(id, status, ownerId));
+    } catch (e) {
+      res.status(errorMsgs.badRequest).send(e);
+    }
   }
 }

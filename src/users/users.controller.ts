@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  Param,
   Patch,
   Post,
   Req,
@@ -13,11 +12,10 @@ import {
 import { UsersService } from './users.service';
 import { UserModel } from './users.model';
 import { CreateUsersDto } from './dto/create-user.dto';
-import { errorMsgs } from '../../constants';
+import { errorMsgs, statusCodes } from '../../constants';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { JwtAuthGuard } from 'src/guards/authGuard';
-import { ObjectId } from 'mongodb';
 
 export interface UserRequest extends Request {
   user: UserModel;
@@ -29,27 +27,36 @@ export class UsersController {
   constructor(public userService: UsersService) {}
 
   @Get()
-  getUsers(): Promise<UserModel[]> {
-    return this.userService.getUsersData();
+  async getUsers(@Res() res) {
+    try {
+      const users = await this.userService.getUsersData();
+
+      res.send(users);
+    } catch {
+      res.status(statusCodes.notFound).send(errorMsgs.noUsersCreated);
+    }
   }
 
   @Post()
-  async createUsers(
-    @Body() createUserDto: CreateUsersDto,
-  ): Promise<UserModel | string> {
+  async createUsers(@Body() createUserDto: CreateUsersDto, @Res() res) {
     try {
       const createUser = await this.userService.createUser(createUserDto);
-      return createUser;
+      res.status(statusCodes.created).send(createUser);
     } catch (e) {
-      return errorMsgs.duplicateEmail;
+      res.status(statusCodes.badRequest).send(errorMsgs.duplicateEmail);
     }
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('/profile')
-  getUserById(@Req() req: UserRequest): Promise<UserModel> {
-    const userId = req._id;
-    return this.userService.getUserDataById(userId);
+  async getUserById(@Req() req: UserRequest, @Res() res) {
+    try {
+      const userId = req._id;
+      const userDetails = await this.userService.getUserDataById(userId);
+      res.status(statusCodes.success).send(userDetails);
+    } catch (e) {
+      res.status(statusCodes.notFound).send(errorMsgs.noUserFound);
+    }
   }
 
   @UseGuards(JwtAuthGuard)
@@ -57,27 +64,32 @@ export class UsersController {
   async updateUserData(
     @Req() req: UserRequest,
     @Body() updateUserDto: UpdateUserDto,
-  ): Promise<UserModel | string> {
+    @Res() res,
+  ) {
     try {
       const userId = req._id;
       const { name, password } = updateUserDto;
-      const abc = await this.userService.updateUserData(userId, name, password);
-      return abc;
+      const updatedUser = await this.userService.updateUserData(
+        userId,
+        name,
+        password,
+      );
+      res.status(statusCodes.success).send(updatedUser);
     } catch (e) {
-      return errorMsgs.noUserFound;
+      res.status(statusCodes.notFound).send(errorMsgs.noUserFound);
     }
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete()
-  async deleteUser(@Req() req: UserRequest): Promise<UserModel | string> {
+  async deleteUser(@Req() req: UserRequest, @Res() res) {
     try {
       const userId = req._id;
 
       const deletedUser = await this.userService.deleteUser(userId);
-      return deletedUser;
+      res.status(statusCodes.success).send(deletedUser);
     } catch (e) {
-      return errorMsgs.noUserFound;
+      res.status(statusCodes.notFound).send(errorMsgs.noUserFound);
     }
   }
   @Post('/login')

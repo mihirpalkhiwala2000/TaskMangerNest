@@ -17,7 +17,9 @@ export class UsersService {
 
   async getUsersData(): Promise<UserModel[]> {
     const users = await this.userModel.find();
-
+    if (!users.length) {
+      throw new Error();
+    }
     return users;
   }
 
@@ -72,7 +74,6 @@ export class UsersService {
     const userData = await this.userModel.findOne({ email });
 
     if (!userData) {
-      console.log('hii');
       throw new Error(errorMsgs.noUserEmailFound);
     }
     const isMatch = await bcrypt.compare(password, userData.password);
