@@ -19,7 +19,6 @@ import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
 import { JwtAuthGuard } from 'src/guards/authGuard';
 import { UserRequest } from 'src/users/users.controller';
 import { errorMsgs, statusCodes } from '../../constants';
-import { errorMonitor } from 'events';
 
 @UseGuards(JwtAuthGuard)
 @Controller('task')
