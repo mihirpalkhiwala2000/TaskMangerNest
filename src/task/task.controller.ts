@@ -19,6 +19,7 @@ import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
 import { JwtAuthGuard } from 'src/guards/authGuard';
 import { UserRequest } from 'src/users/users.controller';
 import { errorMsgs, statusCodes } from '../../constants';
+import { errorMonitor } from 'events';
 
 @UseGuards(JwtAuthGuard)
 @Controller('task')
@@ -44,7 +45,7 @@ export class TaskController {
         res.status(statusCodes.success).send(allTasks);
       }
     } catch {
-      res.status(statusCodes.notFound).send(errorMsgs.noTaskFound);
+      res.status(statusCodes.notFound).send(errorMsgs.emptyTaskArray);
     }
   }
 
@@ -77,7 +78,7 @@ export class TaskController {
       const createdTask = await this.taskService.createTask(createTaskDto);
       res.status(statusCodes.created).send(createdTask);
     } catch (e) {
-      res.status(errorMsgs.badRequest).send(e);
+      res.status(statusCodes.badRequest).send(e.message);
     }
   }
 
@@ -93,7 +94,7 @@ export class TaskController {
         .status(statusCodes.success)
         .send(await this.taskService.deleteTask(ownerId, taskId));
     } catch (e) {
-      res.status(errorMsgs.badRequest).send(e);
+      res.status(statusCodes.notFound).send(errorMsgs.noTaskFound);
     }
   }
   @Patch('/:id/status')
@@ -110,7 +111,7 @@ export class TaskController {
         .status(statusCodes.success)
         .send(await this.taskService.updateTaskStatus(id, status, ownerId));
     } catch (e) {
-      res.status(errorMsgs.badRequest).send(e);
+      res.status(statusCodes.notFound).send(errorMsgs.noTaskFound);
     }
   }
 }
